@@ -35,7 +35,6 @@ void resetGrid(uint8_t *p_grid)
 {
     int iRow, iCol;
 
-    printf("Resetting grid\n");
     for (iRow = 0; iRow < GRID_HEIGHT_CELLS; iRow++)
     {
         for (iCol = 0; iCol < GRID_WIDTH_CELLS; iCol++)
@@ -49,6 +48,16 @@ void resetGrid(uint8_t *p_grid)
                 p_grid[iRow * GRID_WIDTH_CELLS + iCol] = GRID_DEAD;
             }
         }
+    }
+}
+
+void clearGrid(uint8_t *p_grid)
+{
+    int iCell;
+
+    for (iCell = 0; iCell < GRID_WIDTH_CELLS * GRID_HEIGHT_CELLS; iCell++)
+    {
+        p_grid[iCell] = GRID_DEAD;
     }
 }
 
@@ -210,14 +219,24 @@ int main(int argc, char *argv[])
                     case SDLK_ESCAPE:
                         quit = TRUE;
                         break;
+
                     case SDLK_SPACE:
                         pause = !pause;
                         break;
+
                     case SDLK_r:
                         p_displayGrid = grid1;
                         p_nextGrid = grid2;
                         resetGrid(p_displayGrid);
                         pause = TRUE;
+                        break;
+
+                    case SDLK_c:
+                        p_displayGrid = grid1;
+                        p_nextGrid = grid2;
+                        clearGrid(p_displayGrid);
+                        pause = TRUE;
+                        break;
                 }
             }
             else if (event.type == SDL_MOUSEMOTION)
