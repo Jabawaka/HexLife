@@ -1,3 +1,0 @@
-/Users/sergiorubio/Projects/HexLife/build/CMakeFiles/HexLife.dir
-/Users/sergiorubio/Projects/HexLife/build/CMakeFiles/edit_cache.dir
-/Users/sergiorubio/Projects/HexLife/build/CMakeFiles/rebuild_cache.dir

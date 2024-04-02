@@ -10,6 +10,9 @@
 #define SCREEN_WIDTH_PX  (1024)
 #define SCREEN_HEIGHT_PX  (768)
 
+#define TRUE  (1)
+#define FALSE (0)
+
 /* Screen is 64x48 cells */
 #define GRID_WIDTH_CELLS    (72)
 #define GRID_HEIGHT_CELLS   (40)
@@ -24,11 +27,11 @@
 
 #define GRID_MIN_NEIGHBOURS_SURVIVE  (2)
 #define GRID_MAX_NEIGHBOURS_SURVIVE  (4)
-#define GRID_NEIGHBOURS_BORN         (4)
+#define GRID_NEIGHBOURS_BORN         (3)
 
 #define GRID_UPDATE_RATE_MS  (100)
 
-void resetGrid(uint8_t *p_grid1, uint8_t *p_grid2)
+void resetGrid(uint8_t *p_grid)
 {
     int iRow, iCol;
 
@@ -39,11 +42,11 @@ void resetGrid(uint8_t *p_grid1, uint8_t *p_grid2)
         {
             if (rand() % 3 == 0)
             {
-                p_grid1[iRow * GRID_WIDTH_CELLS + iCol] = GRID_DEAD;
+                p_grid[iRow * GRID_WIDTH_CELLS + iCol] = GRID_ALIVE;
             }
             else
             {
-                p_grid1[iRow * GRID_WIDTH_CELLS + iCol] = GRID_ALIVE;
+                p_grid[iRow * GRID_WIDTH_CELLS + iCol] = GRID_DEAD;
             }
         }
     }
@@ -72,7 +75,6 @@ int main(int argc, char *argv[])
     /* ------ DECLARATION ------ */
     /* Variables for rendering */
     SDL_Window *p_window = NULL;
-    SDL_Surface *p_surface = NULL;
     SDL_Renderer *p_renderer = NULL;
 
     SDL_Texture *p_hexTex = NULL;
@@ -88,7 +90,7 @@ int main(int argc, char *argv[])
     SDL_Rect pausedRect = { 180, 96, 0, 0 };
     SDL_Rect rulesRect = { 850, 96, 0, 0 };
 
-    SDL_Color textColor = { 0xF7, 0xF7, 0xF7 };
+    SDL_Color textColor = { 0xF7, 0xF7, 0xF7, 0xFF };
 
     char rulesString[32];
 
@@ -98,12 +100,11 @@ int main(int argc, char *argv[])
     Uint64 ellapsedTime_ms;
     Uint64 lastRenderTime_ms;
 
-    bool quit = false;
-    bool pause = true;
+    int quit = FALSE;
+    int pause = TRUE;
     int mouse_xpos_px, mouse_ypos_px;
 
-    bool gridUpdate = false;
-    int frameCount = 0;
+    int gridUpdate = FALSE;
 
     /* Grid */
     uint8_t grid1[GRID_WIDTH_CELLS * GRID_HEIGHT_CELLS];
@@ -118,7 +119,6 @@ int main(int argc, char *argv[])
     int prevRow, nextRow;
     int prevCol, nextCol;
 
-    bool randAlive = false;
     uint8_t aliveNeighbours = 0;
 
     /* ------ INITIALISATION ------ */
@@ -160,8 +160,6 @@ int main(int argc, char *argv[])
     }
     SDL_SetRenderDrawColor(p_renderer, 0x0D, 0x0D, 0x0D, 0xFF);
 
-    p_surface = SDL_GetWindowSurface(p_window);
-
     /* Load Hex */
     p_miscSurf = IMG_Load("assets/hex.png");
     if (p_miscSurf == NULL)
@@ -181,9 +179,9 @@ int main(int argc, char *argv[])
     /* Start grid */
     srand(time(NULL));
 
-    resetGrid(grid1, grid2);
     p_displayGrid = grid1;
     p_nextGrid = grid2;
+    resetGrid(p_displayGrid);
 
     /* Load font */
     p_font = TTF_OpenFont("assets/monaco.ttf", 32);
@@ -196,30 +194,30 @@ int main(int argc, char *argv[])
     /* ------ MAIN LOOP ------ */
     lastRenderTime_ms = SDL_GetTicks();
     ellapsedTime_ms = 0;
-    while (!quit)
+    while (quit != TRUE)
     {
         /* Read input */
         while (SDL_PollEvent(&event))
         {
             if (event.type == SDL_QUIT)
             {
-                quit = true;
+                quit = TRUE;
             }
             else if (event.type == SDL_KEYDOWN)
             {
                 switch (event.key.keysym.sym)
                 {
                     case SDLK_ESCAPE:
-                        quit = true;
+                        quit = TRUE;
                         break;
                     case SDLK_SPACE:
                         pause = !pause;
                         break;
                     case SDLK_r:
-                        resetGrid(grid1, grid2);
                         p_displayGrid = grid1;
                         p_nextGrid = grid2;
-                        pause = true;
+                        resetGrid(p_displayGrid);
+                        pause = TRUE;
                 }
             }
             else if (event.type == SDL_MOUSEMOTION)
@@ -233,14 +231,13 @@ int main(int argc, char *argv[])
         }
 
         /* Handle pause */
-        if (pause)
+        if (pause == TRUE)
         {
-            gridUpdate = false;
-            frameCount = 0;
+            gridUpdate = FALSE;
         }
 
         /* Update grid */
-        if (gridUpdate)
+        if (gridUpdate == TRUE)
         {
             for (iRow = 0; iRow < GRID_HEIGHT_CELLS; iRow++)
             {
@@ -402,11 +399,11 @@ int main(int argc, char *argv[])
         if (ellapsedTime_ms > GRID_UPDATE_RATE_MS)
         {
             ellapsedTime_ms -= GRID_UPDATE_RATE_MS;
-            gridUpdate = true;
+            gridUpdate = TRUE;
         }
         else
         {
-            gridUpdate = false;
+            gridUpdate = FALSE;
         }
     }
 
