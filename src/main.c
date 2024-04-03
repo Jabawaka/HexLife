@@ -16,6 +16,8 @@
 #define GRID_WIDTH_CELLS   (100)
 #define GRID_HEIGHT_CELLS  (100)
 
+#define GRID_NUM_NEIGHBOURS (6)
+
 #define GRID_CELL_WIDTH       (24)
 #define GRID_CELL_HEIGHT      (23)
 #define GRID_X_STEP_PX        (19)
@@ -81,7 +83,7 @@ void fillGrid(uint8_t *p_grid)
     }
 }
 
-void changeCell(int mouse_xpos_px, int mouse_ypos_px, uint8_t *p_grid)
+void changeCell(int mouse_xpos_px, int mouse_ypos_px, uint8_t *p_grid, int cellState)
 {
     int rowCell, colCell;
     colCell = (mouse_xpos_px - (GRID_CELL_WIDTH - GRID_X_STEP_PX) / 2  - GRID_X_POSITION_PX) / GRID_X_STEP_PX + GRID_X_RENDER_OFFSET_CELLS;
@@ -95,14 +97,35 @@ void changeCell(int mouse_xpos_px, int mouse_ypos_px, uint8_t *p_grid)
         rowCell = (mouse_ypos_px + GRID_Y_OFFSET_ROW_PX - GRID_CELL_HEIGHT / 2 - GRID_Y_POSITION_PX) / GRID_Y_STEP_PX + GRID_Y_RENDER_OFFSET_CELLS;
     }
 
-    if (p_grid[rowCell * GRID_WIDTH_CELLS + colCell] == GRID_ALIVE)
+    if (p_grid[rowCell * GRID_WIDTH_CELLS + colCell] == cellState)
     {
         p_grid[rowCell * GRID_WIDTH_CELLS + colCell] = GRID_DEAD;
     }
     else
     {
-        p_grid[rowCell * GRID_WIDTH_CELLS + colCell] = GRID_ALIVE;
+        p_grid[rowCell * GRID_WIDTH_CELLS + colCell] = cellState;
     }
+}
+
+SDL_Texture *loadTexture(char *pathToSprite, SDL_Renderer *p_renderer)
+{
+    SDL_Surface *p_miscSurf = IMG_Load(pathToSprite);
+    if (p_miscSurf == NULL)
+    {
+        printf("Could not load %s\n", pathToSprite);
+        return NULL;
+    }
+
+    SDL_Texture *p_tex = SDL_CreateTextureFromSurface(p_renderer, p_miscSurf);
+    if (p_tex == NULL)
+    {
+        printf("Could not convert %s into texture\n");
+        return NULL;
+    }
+
+    SDL_FreeSurface(p_miscSurf);
+
+    return p_tex;
 }
 
 int main(int argc, char *argv[])
@@ -119,6 +142,8 @@ int main(int argc, char *argv[])
     SDL_Renderer *p_renderer = NULL;
 
     SDL_Texture *p_hexTex = NULL;
+    SDL_Texture *p_sikTex = NULL;
+    SDL_Texture *p_fixTex = NULL;
     SDL_Surface *p_miscSurf = NULL;
 
     SDL_Rect renderRect;
@@ -147,6 +172,9 @@ int main(int argc, char *argv[])
 
     int gridUpdate = FALSE;
 
+    int shiftDown = FALSE;
+    int ctrlDown = FALSE;
+
     /* Grid */
     uint8_t grid1[GRID_WIDTH_CELLS * GRID_HEIGHT_CELLS];
     uint8_t grid2[GRID_WIDTH_CELLS * GRID_HEIGHT_CELLS];
@@ -156,11 +184,14 @@ int main(int argc, char *argv[])
 
     int iRow;
     int iCol;
+    int iNeigh;
 
     int prevRow, nextRow;
     int prevCol, nextCol;
 
     uint8_t aliveNeighbours = 0;
+
+    int neighbourLocations[GRID_NUM_NEIGHBOURS];
 
     /* ------ INITIALISATION ------ */
     /* Initialise systems */
@@ -214,20 +245,26 @@ int main(int argc, char *argv[])
     SDL_SetRenderDrawColor(p_renderer, 0x0D, 0x0D, 0x0D, 0xFF);
 
     /* Load Hex */
-    p_miscSurf = IMG_Load("assets/hex.png");
-    if (p_miscSurf == NULL)
+    p_hexTex = loadTexture("assets/hex.png", p_renderer);
+    if (p_hexTex == NULL)
     {
-        printf("Could not load hex image\n");
+        printf("Could not load hex\n");
         return 1;
     }
 
-    p_hexTex = SDL_CreateTextureFromSurface(p_renderer, p_miscSurf);
-    if (p_hexTex == NULL)
+    p_sikTex = loadTexture("assets/hex_sick.png", p_renderer);
+    if (p_sikTex == NULL)
     {
-        printf("Could not convert hex into texture\n");
+        printf("Could not load sick hex\n");
         return 1;
     }
-    SDL_FreeSurface(p_miscSurf);
+
+    p_fixTex = loadTexture("assets/hex_fix.png", p_renderer);
+    if (p_fixTex == NULL)
+    {
+        printf("Could not load fix hex\n");
+        return 1;
+    }
 
     /* Start grid */
     srand(time(NULL));
@@ -268,6 +305,16 @@ int main(int argc, char *argv[])
                         pause = !pause;
                         break;
 
+                    case SDLK_LSHIFT:
+                    case SDLK_RSHIFT:
+                        shiftDown = TRUE;
+                        break;
+
+                    case SDLK_LCTRL:
+                    case SDLK_RCTRL:
+                        ctrlDown = TRUE;
+                        break;
+
                     case SDLK_r:
                         p_displayGrid = grid1;
                         p_nextGrid = grid2;
@@ -290,13 +337,48 @@ int main(int argc, char *argv[])
                         break;
                 }
             }
+            else if (event.type == SDL_KEYUP)
+            {
+                switch (event.key.keysym.sym)
+                {
+                    case SDLK_LSHIFT:
+                    case SDLK_RSHIFT:
+                        shiftDown = FALSE;
+                        break;
+
+                    case SDLK_LCTRL:
+                    case SDLK_RCTRL:
+                        ctrlDown = FALSE;
+                        break;
+                }
+            }
             else if (event.type == SDL_MOUSEMOTION)
             {
                 SDL_GetMouseState(&mouse_xpos_pnt, &mouse_ypos_pnt);
             }
             else if (event.type == SDL_MOUSEBUTTONDOWN)
             {
-                changeCell(scaleFactor_width_pntToPx * mouse_xpos_pnt, scaleFactor_height_pntToPx * mouse_ypos_pnt, p_displayGrid);
+                if (shiftDown == TRUE)
+                {
+                    changeCell
+                       (scaleFactor_width_pntToPx * mouse_xpos_pnt,
+                        scaleFactor_height_pntToPx * mouse_ypos_pnt,
+                        p_displayGrid, GRID_SICK);
+                }
+                else if (ctrlDown == TRUE)
+                {
+                    changeCell
+                       (scaleFactor_width_pntToPx * mouse_xpos_pnt,
+                        scaleFactor_height_pntToPx * mouse_ypos_pnt,
+                        p_displayGrid, GRID_FIXED);
+                }
+                else
+                {
+                    changeCell
+                       (scaleFactor_width_pntToPx * mouse_xpos_pnt,
+                        scaleFactor_height_pntToPx * mouse_ypos_pnt,
+                        p_displayGrid, GRID_ALIVE);
+                }
             }
         }
 
@@ -338,36 +420,44 @@ int main(int argc, char *argv[])
                     /* Count alive neighbours */
                     if (iCol % 2 == 0)
                     {
-                        aliveNeighbours =
-                            p_displayGrid[iRow    * GRID_WIDTH_CELLS + prevCol] +
-                            p_displayGrid[prevRow * GRID_WIDTH_CELLS + iCol]    +
-                            p_displayGrid[iRow    * GRID_WIDTH_CELLS + nextCol] +
-                            p_displayGrid[nextRow * GRID_WIDTH_CELLS + prevCol] +
-                            p_displayGrid[nextRow * GRID_WIDTH_CELLS + iCol]    +
-                            p_displayGrid[nextRow * GRID_WIDTH_CELLS + nextCol];
+                        neighbourLocations[0] = iRow    * GRID_WIDTH_CELLS + prevCol;
+                        neighbourLocations[1] = prevRow * GRID_WIDTH_CELLS + iCol;
+                        neighbourLocations[2] = iRow    * GRID_WIDTH_CELLS + nextCol;
+                        neighbourLocations[3] = nextRow * GRID_WIDTH_CELLS + prevCol;
+                        neighbourLocations[4] = nextRow * GRID_WIDTH_CELLS + iCol;
+                        neighbourLocations[5] = nextRow * GRID_WIDTH_CELLS + nextCol;
                     }
                     else
                     {
-                        aliveNeighbours =
-                            p_displayGrid[prevRow * GRID_WIDTH_CELLS + prevCol] +
-                            p_displayGrid[prevRow * GRID_WIDTH_CELLS + iCol]    +
-                            p_displayGrid[prevRow * GRID_WIDTH_CELLS + nextCol] +
-                            p_displayGrid[iRow    * GRID_WIDTH_CELLS + prevCol] +
-                            p_displayGrid[nextRow * GRID_WIDTH_CELLS + iCol]    +
-                            p_displayGrid[iRow    * GRID_WIDTH_CELLS + nextCol];
+                        neighbourLocations[0] = prevRow * GRID_WIDTH_CELLS + prevCol;
+                        neighbourLocations[1] = prevRow * GRID_WIDTH_CELLS + iCol;
+                        neighbourLocations[2] = prevRow * GRID_WIDTH_CELLS + nextCol;
+                        neighbourLocations[3] = iRow    * GRID_WIDTH_CELLS + prevCol;
+                        neighbourLocations[4] = nextRow * GRID_WIDTH_CELLS + iCol;
+                        neighbourLocations[5] = iRow    * GRID_WIDTH_CELLS + nextCol;
+                    }
+
+                    aliveNeighbours = 0;
+                    for (iNeigh = 0; iNeigh < GRID_NUM_NEIGHBOURS; iNeigh++)
+                    {
+                        if(p_displayGrid[neighbourLocations[iNeigh]] != GRID_DEAD)
+                        {
+                            aliveNeighbours++;
+                        }
                     }
 
                     /* Update next grid */
                     p_nextGrid[iRow * GRID_WIDTH_CELLS + iCol] = p_displayGrid[iRow * GRID_WIDTH_CELLS + iCol];
-                    if (p_displayGrid[iRow * GRID_WIDTH_CELLS + iCol] == GRID_ALIVE)
+                    if (p_displayGrid[iRow * GRID_WIDTH_CELLS + iCol] == GRID_ALIVE
+                     || p_displayGrid[iRow * GRID_WIDTH_CELLS + iCol] == GRID_SICK)
                     {
-                        if ( aliveNeighbours < GRID_MIN_NEIGHBOURS_SURVIVE
-                          || aliveNeighbours > GRID_MAX_NEIGHBOURS_SURVIVE)
+                        if (aliveNeighbours < GRID_MIN_NEIGHBOURS_SURVIVE
+                         || aliveNeighbours > GRID_MAX_NEIGHBOURS_SURVIVE)
                         {
                             p_nextGrid[iRow * GRID_WIDTH_CELLS + iCol] = GRID_DEAD;
                         }
                     }
-                    else
+                    else if (p_displayGrid[iRow * GRID_WIDTH_CELLS + iCol] == GRID_DEAD)
                     {
                         if (aliveNeighbours >= GRID_MIN_NEIGHBOURS_CREATE && aliveNeighbours <= GRID_MAX_NEIGHBOURS_CREATE)
                         {
@@ -401,9 +491,17 @@ int main(int argc, char *argv[])
         {
             for (iCol = GRID_X_RENDER_OFFSET_CELLS; iCol < (GRID_X_RENDER_OFFSET_CELLS + GRID_X_RENDER_NUM_CELLS); iCol++)
             {
-                if (p_displayGrid[iRow * GRID_WIDTH_CELLS + iCol] == GRID_ALIVE)
+                switch (p_displayGrid[iRow * GRID_WIDTH_CELLS + iCol])
                 {
-                    SDL_RenderCopy(p_renderer, p_hexTex, NULL, &renderRect);
+                    case GRID_ALIVE:
+                        SDL_RenderCopy(p_renderer, p_hexTex, NULL, &renderRect);
+                        break;
+                    case GRID_SICK:
+                        SDL_RenderCopy(p_renderer, p_sikTex, NULL, &renderRect);
+                        break;
+                    case GRID_FIXED:
+                        SDL_RenderCopy(p_renderer, p_fixTex, NULL, &renderRect);
+                        break;
                 }
 
                 renderRect.x += GRID_X_STEP_PX;
