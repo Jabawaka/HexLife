@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
     Uint64 lastRenderTime_ms;
 
     int quit = FALSE;
-    int pause = TRUE;
+    int paused = TRUE;
     int mouse_xpos_pnt, mouse_ypos_pnt;
 
     int gridUpdate = FALSE;
@@ -179,7 +179,9 @@ int main(int argc, char *argv[])
     uint8_t grid1[GRID_WIDTH_CELLS * GRID_HEIGHT_CELLS];
     uint8_t grid2[GRID_WIDTH_CELLS * GRID_HEIGHT_CELLS];
 
-    uint8_t *p_displayGrid;
+    uint8_t savedGrid[GRID_WIDTH_CELLS * GRID_HEIGHT_CELLS];
+
+    uint8_t *p_dispGrid;
     uint8_t *p_nextGrid;
 
     int iRow;
@@ -269,9 +271,10 @@ int main(int argc, char *argv[])
     /* Start grid */
     srand(time(NULL));
 
-    p_displayGrid = grid1;
+    p_dispGrid = grid1;
     p_nextGrid = grid2;
-    resetGrid(p_displayGrid);
+    resetGrid(p_dispGrid);
+    memcpy(savedGrid, p_dispGrid, GRID_WIDTH_CELLS * GRID_HEIGHT_CELLS * sizeof(uint8_t));
 
     /* Load font */
     p_font = TTF_OpenFont("assets/monaco.ttf", 18);
@@ -302,7 +305,7 @@ int main(int argc, char *argv[])
                         break;
 
                     case SDLK_SPACE:
-                        pause = !pause;
+                        paused = !paused;
                         break;
 
                     case SDLK_LSHIFT:
@@ -316,25 +319,36 @@ int main(int argc, char *argv[])
                         break;
 
                     case SDLK_r:
-                        p_displayGrid = grid1;
+                        p_dispGrid = grid1;
                         p_nextGrid = grid2;
-                        resetGrid(p_displayGrid);
-                        pause = TRUE;
+                        resetGrid(p_dispGrid);
+                        paused = TRUE;
                         break;
 
                     case SDLK_c:
-                        p_displayGrid = grid1;
+                        p_dispGrid = grid1;
                         p_nextGrid = grid2;
-                        clearGrid(p_displayGrid);
-                        pause = TRUE;
+                        clearGrid(p_dispGrid);
+                        paused = TRUE;
                         break;
 
                     case SDLK_f:
-                        p_displayGrid = grid1;
+                        p_dispGrid = grid1;
                         p_nextGrid = grid2;
-                        fillGrid(p_displayGrid);
-                        pause = TRUE;
+                        fillGrid(p_dispGrid);
+                        paused = TRUE;
                         break;
+
+                    case SDLK_s:
+                        if (shiftDown == TRUE)
+                        {
+                            memcpy(p_dispGrid, savedGrid, GRID_WIDTH_CELLS * GRID_HEIGHT_CELLS * sizeof(uint8_t));
+                            paused = TRUE;
+                        }
+                        else
+                        {
+                            memcpy(savedGrid, p_dispGrid, GRID_WIDTH_CELLS * GRID_HEIGHT_CELLS * sizeof(uint8_t));
+                        }
                 }
             }
             else if (event.type == SDL_KEYUP)
@@ -363,27 +377,27 @@ int main(int argc, char *argv[])
                     changeCell
                        (scaleFactor_width_pntToPx * mouse_xpos_pnt,
                         scaleFactor_height_pntToPx * mouse_ypos_pnt,
-                        p_displayGrid, GRID_SICK);
+                        p_dispGrid, GRID_SICK);
                 }
                 else if (ctrlDown == TRUE)
                 {
                     changeCell
                        (scaleFactor_width_pntToPx * mouse_xpos_pnt,
                         scaleFactor_height_pntToPx * mouse_ypos_pnt,
-                        p_displayGrid, GRID_FIXED);
+                        p_dispGrid, GRID_FIXED);
                 }
                 else
                 {
                     changeCell
                        (scaleFactor_width_pntToPx * mouse_xpos_pnt,
                         scaleFactor_height_pntToPx * mouse_ypos_pnt,
-                        p_displayGrid, GRID_ALIVE);
+                        p_dispGrid, GRID_ALIVE);
                 }
             }
         }
 
         /* Handle pause */
-        if (pause == TRUE)
+        if (paused == TRUE)
         {
             gridUpdate = FALSE;
         }
@@ -440,16 +454,16 @@ int main(int argc, char *argv[])
                     aliveNeighbours = 0;
                     for (iNeigh = 0; iNeigh < GRID_NUM_NEIGHBOURS; iNeigh++)
                     {
-                        if(p_displayGrid[neighbourLocations[iNeigh]] != GRID_DEAD)
+                        if(p_dispGrid[neighbourLocations[iNeigh]] != GRID_DEAD)
                         {
                             aliveNeighbours++;
                         }
                     }
 
                     /* Update next grid */
-                    p_nextGrid[iRow * GRID_WIDTH_CELLS + iCol] = p_displayGrid[iRow * GRID_WIDTH_CELLS + iCol];
-                    if (p_displayGrid[iRow * GRID_WIDTH_CELLS + iCol] == GRID_ALIVE
-                     || p_displayGrid[iRow * GRID_WIDTH_CELLS + iCol] == GRID_SICK)
+                    p_nextGrid[iRow * GRID_WIDTH_CELLS + iCol] = p_dispGrid[iRow * GRID_WIDTH_CELLS + iCol];
+                    if (p_dispGrid[iRow * GRID_WIDTH_CELLS + iCol] == GRID_ALIVE
+                     || p_dispGrid[iRow * GRID_WIDTH_CELLS + iCol] == GRID_SICK)
                     {
                         if (aliveNeighbours < GRID_MIN_NEIGHBOURS_SURVIVE
                          || aliveNeighbours > GRID_MAX_NEIGHBOURS_SURVIVE)
@@ -457,7 +471,7 @@ int main(int argc, char *argv[])
                             p_nextGrid[iRow * GRID_WIDTH_CELLS + iCol] = GRID_DEAD;
                         }
                     }
-                    else if (p_displayGrid[iRow * GRID_WIDTH_CELLS + iCol] == GRID_DEAD)
+                    else if (p_dispGrid[iRow * GRID_WIDTH_CELLS + iCol] == GRID_DEAD)
                     {
                         if (aliveNeighbours >= GRID_MIN_NEIGHBOURS_CREATE && aliveNeighbours <= GRID_MAX_NEIGHBOURS_CREATE)
                         {
@@ -468,14 +482,14 @@ int main(int argc, char *argv[])
             }
 
             /* Swap grids */
-            if (p_displayGrid == grid1)
+            if (p_dispGrid == grid1)
             {
-                p_displayGrid = grid2;
+                p_dispGrid = grid2;
                 p_nextGrid = grid1;
             }
             else
             {
-                p_displayGrid = grid1;
+                p_dispGrid = grid1;
                 p_nextGrid = grid2;
             }
         }
@@ -491,7 +505,7 @@ int main(int argc, char *argv[])
         {
             for (iCol = GRID_X_RENDER_OFFSET_CELLS; iCol < (GRID_X_RENDER_OFFSET_CELLS + GRID_X_RENDER_NUM_CELLS); iCol++)
             {
-                switch (p_displayGrid[iRow * GRID_WIDTH_CELLS + iCol])
+                switch (p_dispGrid[iRow * GRID_WIDTH_CELLS + iCol])
                 {
                     case GRID_ALIVE:
                         SDL_RenderCopy(p_renderer, p_hexTex, NULL, &renderRect);
@@ -521,7 +535,7 @@ int main(int argc, char *argv[])
 
         /* Render text */
         p_miscSurf = NULL;
-        if (pause)
+        if (paused)
         {
             p_miscSurf = TTF_RenderText_Solid(p_font, "Paused", textColor);
         }
