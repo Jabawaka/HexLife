@@ -119,7 +119,7 @@ SDL_Texture *loadTexture(char *pathToSprite, SDL_Renderer *p_renderer)
     SDL_Texture *p_tex = SDL_CreateTextureFromSurface(p_renderer, p_miscSurf);
     if (p_tex == NULL)
     {
-        printf("Could not convert %s into texture\n");
+        printf("Could not convert %s into texture\n", pathToSprite);
         return NULL;
     }
 
