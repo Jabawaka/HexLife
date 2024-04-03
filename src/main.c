@@ -7,27 +7,37 @@
 #include <SDL_image.h>
 #include <SDL_ttf.h>
 
-#define SCREEN_WIDTH_PX  (1024)
-#define SCREEN_HEIGHT_PX  (768)
+#define SCREEN_WIDTH_PX   (1000)
+#define SCREEN_HEIGHT_PX  (1000)
 
 #define TRUE  (1)
 #define FALSE (0)
 
-/* Screen is 64x48 cells */
-#define GRID_WIDTH_CELLS    (72)
-#define GRID_HEIGHT_CELLS   (40)
+#define GRID_WIDTH_CELLS   (100)
+#define GRID_HEIGHT_CELLS  (100)
+
+#define GRID_CELL_WIDTH       (24)
+#define GRID_CELL_HEIGHT      (23)
+#define GRID_X_STEP_PX        (19)
+#define GRID_Y_STEP_PX        (24)
+#define GRID_Y_OFFSET_ROW_PX  (12)
+
+#define GRID_X_POSITION_PX          (64)
+#define GRID_Y_POSITION_PX          (64)
+#define GRID_X_RENDER_OFFSET_CELLS  (27)
+#define GRID_Y_RENDER_OFFSET_CELLS  (32)
+#define GRID_X_RENDER_NUM_CELLS     (46)
+#define GRID_Y_RENDER_NUM_CELLS     (36)
+
+#define GRID_FIXED           (3)
+#define GRID_SICK            (2)
 #define GRID_ALIVE           (1)
 #define GRID_DEAD            (0)
 
-#define GRID_X_POSITION_PX   (160)
-#define GRID_Y_POSITION_PX   (200)
-#define GRID_X_STEP_PX        (24)
-#define GRID_Y_STEP_PX        (32)
-#define GRID_Y_OFFSET_ROW_PX  (16)
-
 #define GRID_MIN_NEIGHBOURS_SURVIVE  (2)
-#define GRID_MAX_NEIGHBOURS_SURVIVE  (4)
-#define GRID_NEIGHBOURS_BORN         (3)
+#define GRID_MAX_NEIGHBOURS_SURVIVE  (5)
+#define GRID_MIN_NEIGHBOURS_CREATE   (3)
+#define GRID_MAX_NEIGHBOURS_CREATE   (3)
 
 #define GRID_UPDATE_RATE_MS  (100)
 
@@ -39,13 +49,13 @@ void resetGrid(uint8_t *p_grid)
     {
         for (iCol = 0; iCol < GRID_WIDTH_CELLS; iCol++)
         {
-            if (rand() % 3 == 0)
+            if (rand() % 4 == 0)
             {
                 p_grid[iRow * GRID_WIDTH_CELLS + iCol] = GRID_ALIVE;
             }
             else
             {
-                p_grid[iRow * GRID_WIDTH_CELLS + iCol] = GRID_DEAD;
+               p_grid[iRow * GRID_WIDTH_CELLS + iCol] = GRID_DEAD;
             }
         }
     }
@@ -61,13 +71,21 @@ void clearGrid(uint8_t *p_grid)
     }
 }
 
+void fillGrid(uint8_t *p_grid)
+{
+    int iCell;
+
+    for (iCell = 0; iCell < GRID_WIDTH_CELLS * GRID_HEIGHT_CELLS; iCell++)
+    {
+        p_grid[iCell] = GRID_ALIVE;
+    }
+}
+
 void changeCell(int mouse_xpos_px, int mouse_ypos_px, uint8_t *p_grid)
 {
-    mouse_xpos_px = 2 * mouse_xpos_px;
-    mouse_ypos_px = 2 * mouse_ypos_px;
-
-    int colCell = (mouse_xpos_px  - GRID_X_POSITION_PX) / GRID_X_STEP_PX;
-    int rowCell = (mouse_ypos_px - GRID_Y_POSITION_PX) / GRID_Y_STEP_PX;
+    int rowCell, colCell;
+    colCell = (mouse_xpos_px  - GRID_X_POSITION_PX) / GRID_X_STEP_PX + GRID_X_RENDER_OFFSET_CELLS;
+    rowCell = (mouse_ypos_px - GRID_Y_POSITION_PX) / GRID_Y_STEP_PX + GRID_Y_RENDER_OFFSET_CELLS;
 
     if (p_grid[rowCell * GRID_WIDTH_CELLS + colCell] == GRID_ALIVE)
     {
@@ -82,6 +100,12 @@ void changeCell(int mouse_xpos_px, int mouse_ypos_px, uint8_t *p_grid)
 int main(int argc, char *argv[])
 {
     /* ------ DECLARATION ------ */
+    /* Detect difference in pixels vs window size */
+    int win_width_pnt, win_height_pnt;
+    int gl_width_px, gl_height_px;
+    float scaleFactor_width_pntToPx = 1.0;
+    float scaleFactor_height_pntToPx = 1.0;
+
     /* Variables for rendering */
     SDL_Window *p_window = NULL;
     SDL_Renderer *p_renderer = NULL;
@@ -90,14 +114,14 @@ int main(int argc, char *argv[])
     SDL_Surface *p_miscSurf = NULL;
 
     SDL_Rect renderRect;
-    renderRect.w = 32;
-    renderRect.h = 31;
+    renderRect.w = GRID_CELL_WIDTH;
+    renderRect.h = GRID_CELL_HEIGHT;
 
     TTF_Font *p_font = NULL;
     SDL_Texture *p_pausedTex = NULL;
     SDL_Texture *p_rulesTex = NULL;
-    SDL_Rect pausedRect = { 180, 96, 0, 0 };
-    SDL_Rect rulesRect = { 850, 96, 0, 0 };
+    SDL_Rect pausedRect = { GRID_X_POSITION_PX, SCREEN_HEIGHT_PX - 40, 0, 0 };
+    SDL_Rect rulesRect =  { 0, SCREEN_HEIGHT_PX - 40, 0, 0 };
 
     SDL_Color textColor = { 0xF7, 0xF7, 0xF7, 0xFF };
 
@@ -111,7 +135,7 @@ int main(int argc, char *argv[])
 
     int quit = FALSE;
     int pause = TRUE;
-    int mouse_xpos_px, mouse_ypos_px;
+    int mouse_xpos_pnt, mouse_ypos_pnt;
 
     int gridUpdate = FALSE;
 
@@ -153,12 +177,24 @@ int main(int argc, char *argv[])
     p_window = SDL_CreateWindow
        ("HexLife",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        1024, 768,
+        SCREEN_WIDTH_PX, SCREEN_HEIGHT_PX,
         SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI);
     if (p_window == NULL)
     {
         printf("Could not create window\n");
         return 1;
+    }
+
+    SDL_GL_GetDrawableSize(p_window, &gl_width_px, &gl_height_px);
+    if (gl_width_px != SCREEN_WIDTH_PX || gl_height_px != SCREEN_HEIGHT_PX)
+    {
+        printf("Resizing window\n");
+        scaleFactor_width_pntToPx = (float) gl_width_px / (float) SCREEN_WIDTH_PX;
+        scaleFactor_height_pntToPx = (float) gl_height_px / (float) SCREEN_HEIGHT_PX;
+        win_width_pnt = SCREEN_WIDTH_PX / scaleFactor_width_pntToPx;
+        win_height_pnt = SCREEN_HEIGHT_PX / scaleFactor_height_pntToPx;
+
+        SDL_SetWindowSize(p_window, win_width_pnt, win_height_pnt);
     }
 
     p_renderer = SDL_CreateRenderer(p_window, -1, SDL_RENDERER_ACCELERATED);
@@ -193,7 +229,7 @@ int main(int argc, char *argv[])
     resetGrid(p_displayGrid);
 
     /* Load font */
-    p_font = TTF_OpenFont("assets/monaco.ttf", 32);
+    p_font = TTF_OpenFont("assets/monaco.ttf", 18);
     if (p_font == NULL)
     {
         printf("Could not load font\n");
@@ -237,15 +273,22 @@ int main(int argc, char *argv[])
                         clearGrid(p_displayGrid);
                         pause = TRUE;
                         break;
+
+                    case SDLK_f:
+                        p_displayGrid = grid1;
+                        p_nextGrid = grid2;
+                        fillGrid(p_displayGrid);
+                        pause = TRUE;
+                        break;
                 }
             }
             else if (event.type == SDL_MOUSEMOTION)
             {
-                SDL_GetMouseState(&mouse_xpos_px, &mouse_ypos_px);
+                SDL_GetMouseState(&mouse_xpos_pnt, &mouse_ypos_pnt);
             }
             else if (event.type == SDL_MOUSEBUTTONDOWN)
             {
-                changeCell(mouse_xpos_px, mouse_ypos_px, p_displayGrid);
+                changeCell(scaleFactor_width_pntToPx * mouse_xpos_pnt, scaleFactor_height_pntToPx * mouse_ypos_pnt, p_displayGrid);
             }
         }
 
@@ -318,7 +361,7 @@ int main(int argc, char *argv[])
                     }
                     else
                     {
-                        if (aliveNeighbours == GRID_NEIGHBOURS_BORN)
+                        if (aliveNeighbours >= GRID_MIN_NEIGHBOURS_CREATE && aliveNeighbours <= GRID_MAX_NEIGHBOURS_CREATE)
                         {
                             p_nextGrid[iRow * GRID_WIDTH_CELLS + iCol] = GRID_ALIVE;
                         }
@@ -346,9 +389,9 @@ int main(int argc, char *argv[])
         //Render texture to screen
         renderRect.x = GRID_X_POSITION_PX;
         renderRect.y = GRID_Y_POSITION_PX;
-        for (iRow = 0; iRow < GRID_HEIGHT_CELLS; iRow++)
+        for (iRow = GRID_Y_RENDER_OFFSET_CELLS; iRow < (GRID_Y_RENDER_OFFSET_CELLS + GRID_Y_RENDER_NUM_CELLS); iRow++)
         {
-            for (iCol = 0; iCol < GRID_WIDTH_CELLS; iCol++)
+            for (iCol = GRID_X_RENDER_OFFSET_CELLS; iCol < (GRID_X_RENDER_OFFSET_CELLS + GRID_X_RENDER_NUM_CELLS); iCol++)
             {
                 if (p_displayGrid[iRow * GRID_WIDTH_CELLS + iCol] == GRID_ALIVE)
                 {
@@ -393,7 +436,9 @@ int main(int argc, char *argv[])
         }
         SDL_FreeSurface(p_miscSurf);
 
-        snprintf(rulesString, 32, "Live: %d-%d, Birth: %d", GRID_MIN_NEIGHBOURS_SURVIVE, GRID_MAX_NEIGHBOURS_SURVIVE, GRID_NEIGHBOURS_BORN);
+        snprintf(rulesString, 32, "Live: %d-%d, Birth: %d-%d",
+                 GRID_MIN_NEIGHBOURS_SURVIVE, GRID_MAX_NEIGHBOURS_SURVIVE,
+                 GRID_MIN_NEIGHBOURS_CREATE, GRID_MAX_NEIGHBOURS_CREATE);
         p_miscSurf = TTF_RenderText_Solid(p_font, rulesString, textColor);
         if (p_miscSurf != NULL)
         {
@@ -402,6 +447,7 @@ int main(int argc, char *argv[])
             {
                 rulesRect.w = p_miscSurf->w;
                 rulesRect.h = p_miscSurf->h;
+                rulesRect.x = SCREEN_WIDTH_PX - GRID_X_POSITION_PX - rulesRect.w;
                 SDL_RenderCopy(p_renderer, p_rulesTex, NULL, &rulesRect);
             }
         }
