@@ -84,8 +84,16 @@ void fillGrid(uint8_t *p_grid)
 void changeCell(int mouse_xpos_px, int mouse_ypos_px, uint8_t *p_grid)
 {
     int rowCell, colCell;
-    colCell = (mouse_xpos_px  - GRID_X_POSITION_PX) / GRID_X_STEP_PX + GRID_X_RENDER_OFFSET_CELLS;
-    rowCell = (mouse_ypos_px - GRID_Y_POSITION_PX) / GRID_Y_STEP_PX + GRID_Y_RENDER_OFFSET_CELLS;
+    colCell = (mouse_xpos_px - (GRID_CELL_WIDTH - GRID_X_STEP_PX) / 2  - GRID_X_POSITION_PX) / GRID_X_STEP_PX + GRID_X_RENDER_OFFSET_CELLS;
+
+    if (colCell % 2 == 0)
+    {
+        rowCell = (mouse_ypos_px - GRID_CELL_HEIGHT / 2 - GRID_Y_POSITION_PX) / GRID_Y_STEP_PX + GRID_Y_RENDER_OFFSET_CELLS;
+    }
+    else
+    {
+        rowCell = (mouse_ypos_px + GRID_Y_OFFSET_ROW_PX - GRID_CELL_HEIGHT / 2 - GRID_Y_POSITION_PX) / GRID_Y_STEP_PX + GRID_Y_RENDER_OFFSET_CELLS;
+    }
 
     if (p_grid[rowCell * GRID_WIDTH_CELLS + colCell] == GRID_ALIVE)
     {
