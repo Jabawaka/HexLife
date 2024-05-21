@@ -25,7 +25,7 @@ find_package(SDL2 REQUIRED)
 find_package(SDL2_image REQUIRED)
 find_package(SDL2_ttf REQUIRED)
 
-add_executable(HexLife main.c)
+add_executable(HexLife main.c grid.c)
 target_link_libraries(HexLife PRIVATE
     SDL2::SDL2
     SDL2::SDL2main
