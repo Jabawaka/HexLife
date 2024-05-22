@@ -18,21 +18,6 @@
 #define GRID_WIDTH_CELLS   (100)
 #define GRID_HEIGHT_CELLS  (100)
 
-#define GRID_NUM_NEIGHBOURS (6)
-
-#define GRID_CELL_WIDTH       (24)
-#define GRID_CELL_HEIGHT      (23)
-#define GRID_X_STEP_PX        (19)
-#define GRID_Y_STEP_PX        (24)
-#define GRID_Y_OFFSET_ROW_PX  (12)
-
-#define GRID_X_POSITION_PX          (64)
-#define GRID_Y_POSITION_PX          (64)
-#define GRID_X_RENDER_OFFSET_CELLS  (27)
-#define GRID_Y_RENDER_OFFSET_CELLS  (32)
-#define GRID_X_RENDER_NUM_CELLS     (46)
-#define GRID_Y_RENDER_NUM_CELLS     (36)
-
 #define GRID_MIN_NEIGHBOURS_SURVIVE  (2)
 #define GRID_MAX_NEIGHBOURS_SURVIVE  (4)
 #define GRID_MIN_NEIGHBOURS_CREATE   (3)
@@ -40,30 +25,6 @@
 
 #define GRID_UPDATE_RATE_MS  (100)
 
-
-void changeCell(int mouse_xpos_px, int mouse_ypos_px, uint8_t *p_grid, int cellState)
-{
-    int rowCell, colCell;
-    colCell = (mouse_xpos_px - (GRID_CELL_WIDTH - GRID_X_STEP_PX) / 2  - GRID_X_POSITION_PX) / GRID_X_STEP_PX + GRID_X_RENDER_OFFSET_CELLS;
-
-    if (colCell % 2 == 0)
-    {
-        rowCell = (mouse_ypos_px - GRID_CELL_HEIGHT / 2 - GRID_Y_POSITION_PX) / GRID_Y_STEP_PX + GRID_Y_RENDER_OFFSET_CELLS;
-    }
-    else
-    {
-        rowCell = (mouse_ypos_px + GRID_Y_OFFSET_ROW_PX - GRID_CELL_HEIGHT / 2 - GRID_Y_POSITION_PX) / GRID_Y_STEP_PX + GRID_Y_RENDER_OFFSET_CELLS;
-    }
-
-    if (p_grid[rowCell * GRID_WIDTH_CELLS + colCell] == cellState)
-    {
-        p_grid[rowCell * GRID_WIDTH_CELLS + colCell] = GRID_DEAD;
-    }
-    else
-    {
-        p_grid[rowCell * GRID_WIDTH_CELLS + colCell] = cellState;
-    }
-}
 
 SDL_Texture *loadTexture(char *pathToSprite, SDL_Renderer *p_renderer)
 {
@@ -126,6 +87,9 @@ int main(int argc, char *argv[])
 
     int quit = FALSE;
     int paused = TRUE;
+    int mousePressed = FALSE;
+    uint8_t mouseCurrCellState = GRID_DEAD;
+    uint8_t mouseNewCellState = GRID_DEAD;
     int mouse_xpos_pnt, mouse_ypos_pnt;
 
     int gridUpdate = FALSE;
@@ -309,28 +273,63 @@ int main(int argc, char *argv[])
             }
             else if (event.type == SDL_MOUSEBUTTONDOWN)
             {
-                if (shiftDown == TRUE)
+                mousePressed = TRUE;
+                mouseCurrCellState = Grid_getDispValueFromMouse
+                   (&grid,
+                    scaleFactor_width_pntToPx * mouse_xpos_pnt,
+                    scaleFactor_height_pntToPx * mouse_ypos_pnt);
+
+                switch (mouseCurrCellState)
                 {
-                    changeCell
-                       (scaleFactor_width_pntToPx * mouse_xpos_pnt,
-                        scaleFactor_height_pntToPx * mouse_ypos_pnt,
-                        grid.p_disp, GRID_SICK);
-                }
-                else if (ctrlDown == TRUE)
-                {
-                    changeCell
-                       (scaleFactor_width_pntToPx * mouse_xpos_pnt,
-                        scaleFactor_height_pntToPx * mouse_ypos_pnt,
-                        grid.p_disp, GRID_FIXED);
-                }
-                else
-                {
-                    changeCell
-                       (scaleFactor_width_pntToPx * mouse_xpos_pnt,
-                        scaleFactor_height_pntToPx * mouse_ypos_pnt,
-                        grid.p_disp, GRID_ALIVE);
+                    case GRID_DEAD:
+                        if (shiftDown == TRUE)
+                        {
+                            mouseNewCellState = GRID_SICK;
+                        }
+                        else if (ctrlDown == TRUE)
+                        {
+                            mouseNewCellState = GRID_FIXED;
+                        }
+                        else
+                        {
+                            mouseNewCellState = GRID_ALIVE;
+                        }
+                        break;
+
+                    case GRID_ALIVE:
+                        if (shiftDown == TRUE)
+                        {
+                            mouseNewCellState = GRID_SICK;
+                        }
+                        else if (ctrlDown == TRUE)
+                        {
+                            mouseNewCellState = GRID_FIXED;
+                        }
+                        else
+                        {
+                            mouseNewCellState = GRID_DEAD;
+                        }
+                        break;
+
+                    case GRID_FIXED:
+                    case GRID_SICK:
+                        mouseNewCellState = GRID_DEAD;
+                        break;
                 }
             }
+            else if (event.type == SDL_MOUSEBUTTONUP)
+            {
+                mousePressed = FALSE;
+            }
+        }
+
+        if (mousePressed == TRUE)
+        {
+            Grid_changeCell
+                (&grid,
+                scaleFactor_width_pntToPx * mouse_xpos_pnt,
+                scaleFactor_height_pntToPx * mouse_ypos_pnt,
+                mouseNewCellState);
         }
 
         /* Handle pause */

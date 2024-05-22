@@ -176,6 +176,42 @@ void Grid_hexGridNextWithRange(Grid *p_grid, int minAlive, int maxAlive, int min
 }
 
 
+void Grid_changeCell(Grid *p_grid, int mouse_xpos_px, int mouse_ypos_px, int cellState)
+{
+    int rowCell, colCell;
+    colCell = (mouse_xpos_px - (GRID_CELL_WIDTH - GRID_X_STEP_PX) / 2  - GRID_X_POSITION_PX) / GRID_X_STEP_PX + GRID_X_RENDER_OFFSET_CELLS;
+
+    if (colCell % 2 == 0)
+    {
+        rowCell = (mouse_ypos_px - GRID_CELL_HEIGHT / 2 - GRID_Y_POSITION_PX) / GRID_Y_STEP_PX + GRID_Y_RENDER_OFFSET_CELLS;
+    }
+    else
+    {
+        rowCell = (mouse_ypos_px + GRID_Y_OFFSET_ROW_PX - GRID_CELL_HEIGHT / 2 - GRID_Y_POSITION_PX) / GRID_Y_STEP_PX + GRID_Y_RENDER_OFFSET_CELLS;
+    }
+
+    Grid_setDispValue(p_grid, rowCell, colCell, cellState);
+}
+
+
+uint8_t Grid_getDispValueFromMouse(Grid *p_grid, int mouse_xpos_px, int mouse_ypos_px)
+{
+    int rowCell, colCell;
+    colCell = (mouse_xpos_px - (GRID_CELL_WIDTH - GRID_X_STEP_PX) / 2  - GRID_X_POSITION_PX) / GRID_X_STEP_PX + GRID_X_RENDER_OFFSET_CELLS;
+
+    if (colCell % 2 == 0)
+    {
+        rowCell = (mouse_ypos_px - GRID_CELL_HEIGHT / 2 - GRID_Y_POSITION_PX) / GRID_Y_STEP_PX + GRID_Y_RENDER_OFFSET_CELLS;
+    }
+    else
+    {
+        rowCell = (mouse_ypos_px + GRID_Y_OFFSET_ROW_PX - GRID_CELL_HEIGHT / 2 - GRID_Y_POSITION_PX) / GRID_Y_STEP_PX + GRID_Y_RENDER_OFFSET_CELLS;
+    }
+
+    return Grid_getDispValue(p_grid, rowCell, colCell);
+}
+
+
 uint8_t Grid_getDispValue(Grid *p_grid, int row, int col)
 {
     return p_grid->p_disp[row * p_grid->width_cells + col];
