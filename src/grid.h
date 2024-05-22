@@ -4,6 +4,8 @@
 
 #include <stdint.h>
 
+#include "bool.h"
+
 
 #define GRID_DEAD  (0)
 #define GRID_ALIVE (1)

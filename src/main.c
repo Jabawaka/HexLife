@@ -8,12 +8,10 @@
 #include <SDL_ttf.h>
 
 #include "grid.h"
+#include "bool.h"
 
 #define SCREEN_WIDTH_PX   (1000)
 #define SCREEN_HEIGHT_PX  (1000)
-
-#define TRUE  (1)
-#define FALSE (0)
 
 #define GRID_WIDTH_CELLS   (100)
 #define GRID_HEIGHT_CELLS  (100)
