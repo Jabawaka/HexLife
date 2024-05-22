@@ -91,6 +91,8 @@ int main(int argc, char *argv[])
     int mouse_xpos_pnt, mouse_ypos_pnt;
 
     int gridUpdate = FALSE;
+    int isStationary = FALSE;
+    int prevStationary = FALSE;
 
     int shiftDown = FALSE;
     int ctrlDown = FALSE;
@@ -339,10 +341,16 @@ int main(int argc, char *argv[])
         /* Update grid */
         if (gridUpdate == TRUE)
         {
-            Grid_hexGridNextWithRange
+            isStationary = Grid_hexGridNextWithRange
                (&grid,
                 GRID_MIN_NEIGHBOURS_SURVIVE, GRID_MAX_NEIGHBOURS_SURVIVE,
                 GRID_MIN_NEIGHBOURS_CREATE, GRID_MAX_NEIGHBOURS_CREATE);
+
+            if (isStationary == TRUE && prevStationary == FALSE)
+            {
+                printf("Stationary achieved\n");
+            }
+            prevStationary = isStationary;
         }
 
         /* ------ RENDER ------ */

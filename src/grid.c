@@ -79,7 +79,7 @@ void Grid_fillGrid(Grid *p_grid)
 }
 
 
-void Grid_hexGridNextWithRange(Grid *p_grid, int minAlive, int maxAlive, int minCreate, int maxCreate)
+int Grid_hexGridNextWithRange(Grid *p_grid, int minAlive, int maxAlive, int minCreate, int maxCreate)
 {
     int iRow, iCol, iNeigh;
     int prevRow, nextRow;
@@ -88,6 +88,8 @@ void Grid_hexGridNextWithRange(Grid *p_grid, int minAlive, int maxAlive, int min
     int neighbourLocations[GRID_HEX_NUM_NEIGHBOURS];
     int aliveNeighbours;
     int anySick;
+
+    int isStationary = TRUE;
 
     for (iRow = 0; iRow < p_grid->height_cells; iRow++)
     {
@@ -157,12 +159,14 @@ void Grid_hexGridNextWithRange(Grid *p_grid, int minAlive, int maxAlive, int min
                 if (aliveNeighbours < minAlive || aliveNeighbours > maxAlive)
                 {
                     Grid_setNextValue(p_grid, iRow, iCol, GRID_DEAD);
+                    isStationary = FALSE;
                 }
             }
             else if (Grid_getDispValue(p_grid, iRow, iCol) == GRID_DEAD)
             {
                 if (aliveNeighbours >= minCreate && aliveNeighbours <= maxCreate)
                 {
+                    isStationary = FALSE;
                     if (anySick == TRUE)
                     {
                         Grid_setNextValue(p_grid, iRow, iCol, GRID_SICK);
@@ -186,6 +190,8 @@ void Grid_hexGridNextWithRange(Grid *p_grid, int minAlive, int maxAlive, int min
         p_grid->p_disp = p_grid->p_data1;
         p_grid->p_next = p_grid->p_data2;
     }
+
+    return isStationary;
 }
 
 

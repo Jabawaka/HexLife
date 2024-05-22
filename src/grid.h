@@ -52,7 +52,7 @@ extern void Grid_clearGrid(Grid *p_grid);
 
 extern void Grid_fillGrid(Grid *p_grid);
 
-extern void Grid_hexGridNextWithRange(Grid *p_grid, int minAlive, int maxAlive, int minCreate, int maxCreate);
+extern int Grid_hexGridNextWithRange(Grid *p_grid, int minAlive, int maxAlive, int minCreate, int maxCreate);
 
 extern void Grid_changeCell(Grid *p_grid, int mouse_xpos_px, int mouse_ypos_px, int cellState);
 
