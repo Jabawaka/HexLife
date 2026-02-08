@@ -4,7 +4,7 @@ game consisting of a grid of cells that can be in one of two states, alive or
 dead. The number of neighbours at each step determines whether a live cell
 survives or dies or whether a dead cell can come to life.
 
-![image]([https://github.com/Jabawaka/Hexlife.git/example.gif](https://github.com/Jabawaka/HexLife/blob/main/example.gif))
+![image](https://github.com/Jabawaka/HexLife/blob/main/example.gif)
 
 # Dependencies
 You need the following libraries to be able to compile and run the project:
